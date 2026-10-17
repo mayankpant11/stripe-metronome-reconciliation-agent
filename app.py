@@ -1,4 +1,3 @@
-
 """
 Stripe + Metronome Reconciliation Agent - Production Ready
 Run: python app.py
@@ -17,7 +16,6 @@ BASE = pathlib.Path(__file__).parent
 idempotency_cache = {}
 
 def cosine_sim(query: str, doc_content: str):
-    # Simple keyword overlap as proxy for cosine similarity for demo
     q_words = set(query.lower().split())
     d_words = set(doc_content.lower().split())
     overlap = len(q_words & d_words)
@@ -27,7 +25,6 @@ def retrieve_top3(query, threshold=0.2):
     docs = get_docs()
     scored = [(doc, cosine_sim(query, doc["content"] + " " + doc["title"])) for doc in docs]
     scored = sorted(scored, key=lambda x: x[1], reverse=True)[:3]
-    # Filter by threshold
     filtered = [(doc, score) for doc, score in scored if score >= threshold]
     return filtered
 
@@ -35,31 +32,26 @@ def retrieve_top3(query, threshold=0.2):
 async def chat(payload: dict, idempotency_key: str = Header(None, alias="Idempotency-Key")):
     query = payload.get("query", "")
     
-    # Idempotency check
     if idempotency_key and idempotency_key in idempotency_cache:
-        # Return cached
         cached = idempotency_cache[idempotency_key]
         if time.time() - cached["ts"] < 60:
             async def gen_cached():
                 yield cached["response"]
             return StreamingResponse(gen_cached(), media_type="text/event-stream")
     
-    # 1. Retrieve docs
     top_docs = retrieve_top3(query)
     
-    # 2. Extract invoice id from query (simple parse)
     invoice_id = None
     for token in query.split():
         if token.startswith("in_"):
             invoice_id = token.strip("?,.")
     if not invoice_id:
-        invoice_id = "in_123"  # default for demo
+        invoice_id = "in_123"
     
     stripe_inv = get_stripe_invoice(invoice_id)
     met_con_id = stripe_inv.get("metronome_contract_id", "con_met_001")
     met_con = get_metronome_contract(met_con_id)
     
-    # 3. Build context with validation
     system_prompt = f"""You are Billing Reconciliation Agent. Explain Stripe vs Metronome mismatch using ONLY tool data and retrieved docs.
     
 Tool Data:
@@ -73,11 +65,9 @@ Rules:
 - Explain with live data: rated_at vs finalized_at, commit_remaining, currency
 """
     
-    # 4. Generate answer (mock LLM for demo, replace with OpenAI call in prod)
     if not top_docs:
         answer = f"Cause indeterminable. I checked: Stripe invoice {invoice_id} amount {stripe_inv.get('amount')}, Metronome contract {met_con_id} rated {met_con.get('rated_usage_amount')} at {met_con.get('rated_at')}. No runbook doc matched above threshold. Recommend human review of Metronome logs."
     else:
-        # Pick top doc to craft answer
         top_doc, score = top_docs[0]
         if top_doc["id"] == "doc_metronome_delay":
             answer = f"Invoice {invoice_id} is $0 because Metronome rated usage ${met_con.get('rated_usage_amount')} at {met_con.get('rated_at')} which is 95 mins AFTER Stripe finalized at {stripe_inv.get('finalized_at')} [doc_metronome_delay]. The usage will be included in next invoice {stripe_inv.get('id', 'in_124')} amount ${met_con.get('rated_usage_amount')}."
@@ -88,19 +78,12 @@ Rules:
         else:
             answer = f"Matched {top_doc['id']} with score {score:.2f}"
     
-    # 5. Stream (mock streaming)
     async def gen():
-        # Simulate streaming tokens
         for chunk in answer.split(" "):
-            yield f"data: {chunk} 
-
-"
+            yield f"data: {chunk} \n\n"
             await asyncio.sleep(0.05)
-        yield "data: [DONE]
-
-"
+        yield "data: [DONE]\n\n"
     
-    # Log for observability
     log_entry = {
         "ts": time.time(),
         "query": query,
@@ -110,10 +93,9 @@ Rules:
         "metronome": met_con,
         "response": answer
     }
-    (BASE / "observability.jsonl").open("a").write(json.dumps(log_entry) + "
-")
+    (BASE / "observability.jsonl").open("a").write(json.dumps(log_entry) + "\n")
     
-    full_response = " ".join([f"data: {c} " for c in answer.split(" ")])
+    full_response = " ".join([f"data: {c} \n\n" for c in answer.split(" ")])
     if idempotency_key:
         idempotency_cache[idempotency_key] = {"ts": time.time(), "response": full_response}
     
