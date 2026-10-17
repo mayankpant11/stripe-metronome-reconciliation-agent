@@ -40,8 +40,7 @@ async def chat(payload: dict, idempotency_key: str = Header(None, alias="Idempot
         if token.startswith("in_"):
             invoice_id = token.strip("?,.")
     if not invoice_id:
-    return {"answer": "Cause indeterminable. No invoice ID found in query. Please provide invoice like in_123."}
-    
+        return {"answer": "Cause indeterminable. No invoice ID found in query. Please provide invoice like in_123.", "query": query, "invoice_id": None, "top_docs": [], "stripe": None, "metronome": None}
     try:
         stripe_inv = get_stripe_invoice(invoice_id)
         met_con_id = stripe_inv.get("metronome_contract_id", "con_met_001")
