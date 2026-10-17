@@ -13,7 +13,7 @@ def cosine_sim(query, doc_content):
 def retrieve_top3(query, threshold=0.2):
     docs = json.loads((BASE / "docs.json").read_text())
     scored = [(doc, cosine_sim(query, doc["content"] + " " + doc["title"])) for doc in docs]
-    scored = sorted(scored, key=lam bda x: x[1], reverse=True)[:3]
+    scored = sorted(scored, key=lambda x: x[1], reverse=True)[:3]
     return [(d,s) for d,s in scored if s >= threshold]
 
 GOLDEN_SET = [
