@@ -43,6 +43,15 @@ async def chat(payload: dict, idempotency_key: str = Header(None, alias="Idempot
         return {"answer": "Cause indeterminable. No invoice ID found in query. Please provide invoice like in_123.", "query": query, "invoice_id": None, "top_docs": [], "stripe": None, "metronome": None}
     try:
         stripe_inv = get_stripe_invoice(invoice_id)
+        if stripe_inv.get("error") == f"Invoice {invoice_id} not found":
+            return {
+                "answer": f"Invoice {invoice_id} could not be found.",
+                "query": query,
+                "invoice_id": invoice_id,
+                "top_docs": [],
+                "stripe": None,
+                "metronome": None
+            }
         met_con_id = stripe_inv.get("metronome_contract_id", "con_met_001")
         met_con = get_metronome_contract(met_con_id)
     except Exception as e:
