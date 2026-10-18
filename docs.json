@@ -36,5 +36,44 @@
       "USD",
       "subsidiary"
     ]
+  },
+  {
+    "id": "doc_credit_balance",
+    "title": "Credits Apply Before Usage Overage",
+    "content": "When an invoice is higher than the remaining commit credit, compare rated usage with the credit balance. Credits apply first and only usage above the available balance is charged. Example rated usage 800 less credit balance 500 produces invoice usage charge 300. Check credit balance, commit consumption, and overage rule.",
+    "keywords": [
+      "credit",
+      "balance",
+      "overage",
+      "commit",
+      "rated usage",
+      "charge"
+    ]
+  },
+  {
+    "id": "doc_tax_inclusive_exclusive",
+    "title": "Tax Added to Usage Invoice",
+    "content": "A Stripe invoice can exceed Metronome rated usage when tax is configured as exclusive. Compare the usage line with the tax line and check tax behavior, tax rate, and tax amount. Example 800 rated usage plus 40 sales tax at 5 percent gives a total invoice of 840. Tax is separate from rated usage.",
+    "keywords": [
+      "tax",
+      "sales tax",
+      "exclusive",
+      "invoice total",
+      "tax rate",
+      "rated usage"
+    ]
+  },
+  {
+    "id": "doc_duplicate_usage_event",
+    "title": "Duplicate Usage Event Increases Rated Amount",
+    "content": "If an invoice usage amount is higher than expected, inspect event ingestion for duplicate usage events and retries. Compare rated usage with the source event IDs and duplicate event count. A repeated event may cause usage to be rated more than once; verify idempotency and request a rating correction if confirmed.",
+    "keywords": [
+      "duplicate",
+      "usage event",
+      "retry",
+      "rated amount",
+      "idempotency",
+      "overcharge"
+    ]
   }
 ]
